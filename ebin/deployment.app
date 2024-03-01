@@ -1,0 +1,11 @@
+{application,deployment,
+             [{description,"An OTP application"},
+              {vsn,"0.1.0"},
+              {registered,[]},
+              {mod,{deployment_app,[]}},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[deployment,deployment_app,deployment_sup,
+                        lib_deployment]},
+              {licenses,["Apache-2.0"]},
+              {links,[]}]}.
