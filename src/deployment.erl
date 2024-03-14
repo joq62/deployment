@@ -390,7 +390,7 @@ handle_cast(UnMatchedSignal, State) ->
 	  {stop, Reason :: normal | term(), NewState :: term()}.
 
 handle_info(timeout, State) ->
-    io:format("timeout ~p~n",[{?MODULE,?LINE}]),
+ %   io:format("timeout ~p~n",[{?MODULE,?LINE}]),
     RepoDir=State#state.repo_dir,
     RepoGit=State#state.repo_git,
     Result=try lib_deployment:check_update_repo_return_maps(RepoDir,RepoGit) of
@@ -404,7 +404,7 @@ handle_info(timeout, State) ->
 	   end,
     NewState=case Result of
 		 {ok,Maps}->
-		     io:format("Maps ~p~n",[{Maps,?MODULE,?LINE}]),
+	%	     io:format("Maps ~p~n",[{Maps,?MODULE,?LINE}]),
 		     State#state{spec_maps=Maps};
 		 ErrorEvent->
 		     io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
