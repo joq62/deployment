@@ -14,6 +14,8 @@
  
 %% API
 -export([
+	 read_repo/1,
+
 	 get_info/3,
 	 check_update_repo_return_maps/2
 	
@@ -28,9 +30,14 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-
-
-
+read_repo(RepoDir)->
+    {ok,AllFileNames}=file:list_dir(RepoDir),
+    AllFullFilenames=[filename:join([RepoDir,FileName])||FileName<-AllFileNames],
+    HostFiles=[FullFileName||FullFileName<-AllFullFilenames,
+			     ?Extension==filename:extension(FullFileName)],
+    FileConsult=[file:consult(HostFile)||HostFile<-HostFiles],
+    HostSpecMaps=[Map||{ok,[Map]}<-FileConsult],
+    {ok,HostSpecMaps}. 
 
 
 %%********************* Deployment *****************************************    
@@ -60,19 +67,13 @@ get_info(Key,DeploymentId,SpecMaps)->
 check_update_repo_return_maps(RepoDir,RepoGit)->
     case is_repo_updated(RepoDir) of
 	{error,["RepoDir doesnt exists, need to clone"]}->
-	    ok=clone_repo(RepoDir,RepoGit);
+	    {ok,_HostSpecMaps}=clone_repo(RepoDir,RepoGit);
 	{ok,false} ->
-	    ok=update_repo(RepoDir);
+	    {ok,_HostSpecMaps}=update_repo(RepoDir);
 	{ok,true}->
 	    ok
     end,
-    
-    {ok,AllFileNames}=file:list_dir(RepoDir),
-    AllFullFilenames=[filename:join([RepoDir,FileName])||FileName<-AllFileNames],
-    HostFiles=[FullFileName||FullFileName<-AllFullFilenames,
-			     ?Extension==filename:extension(FullFileName)],
-    FileConsult=[file:consult(HostFile)||HostFile<-HostFiles],
-    HostSpecMaps=[Map||{ok,[Map]}<-FileConsult],
+    {ok,HostSpecMaps}=read_repo(RepoDir),
     {ok,HostSpecMaps}. 
 	       
 %%--------------------------------------------------------------------
@@ -95,7 +96,13 @@ is_repo_updated(RepoDir)->
 %%--------------------------------------------------------------------
 update_repo(RepoDir)->
     true=filelib:is_dir(RepoDir),
-    Result=merge(RepoDir),   
+    Result=case fetch_merge(RepoDir) of
+	       ok->
+		   {ok,HostSpecMaps}=read_repo(RepoDir),
+		   {ok,HostSpecMaps};
+	       Error->
+		   Error
+	   end,
     Result.
 %%--------------------------------------------------------------------
 %% @doc
@@ -105,9 +112,9 @@ update_repo(RepoDir)->
 clone_repo(RepoDir,RepoGit)->
     file:del_dir_r(RepoDir),
     ok=file:make_dir(RepoDir),
-    Result=clone(RepoDir,RepoGit),   
-    Result.
-
+    ok=clone(RepoDir,RepoGit),   
+    {ok,HostSpecMaps}=read_repo(RepoDir),
+    {ok,HostSpecMaps}.
 
 
 %%%===================================================================
@@ -118,11 +125,29 @@ clone_repo(RepoDir,RepoGit)->
 %% 
 %% @end
 %%--------------------------------------------------------------------
+fetch_merge(LocalRepo)->
+    Result=case is_up_to_date(LocalRepo) of
+	       false->
+		   os:cmd("git -C "++LocalRepo++" "++"fetch origin "),
+		   os:cmd("git -C "++LocalRepo++" "++"merge  "),
+		   {ok,HostSpecMaps}=read_repo(LocalRepo),
+		   {ok,HostSpecMaps};
+	       true->
+		   {error,["Already updated ",LocalRepo]}
+	   end,
+    Result.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
 merge(LocalRepo)->
     Result=case is_up_to_date(LocalRepo) of
 	       false->
 		   os:cmd("git -C "++LocalRepo++" "++"merge  "),
-		   ok;
+		   {ok,HostSpecMaps}=read_repo(LocalRepo),
+		   {ok,HostSpecMaps};
 	       true->
 		   {error,["Already updated ",LocalRepo]}
 	   end,

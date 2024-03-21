@@ -305,8 +305,8 @@ handle_call({is_repo_updated}, _From, State) ->
 handle_call({update_repo}, _From, State) ->
     RepoDir=State#state.repo_dir,
     Result=try lib_deployment:update_repo(RepoDir) of
-	       ok->
-		   ok;
+	       {ok,R}->
+		    {ok,R};
 	       {error,Reason}->
 		   {error,Reason}
 	   catch
@@ -314,9 +314,9 @@ handle_call({update_repo}, _From, State) ->
 		   {Event,Reason,Stacktrace,?MODULE,?LINE}
 	   end,
     Reply=case Result of
-	      ok->
+	      {ok,UpdatedMaps}->
 		  %io:format("UpdateResult ~p~n",[{UpdateResult,?MODULE,?LINE}]),
-		  NewState=State,
+		  NewState=State#state{spec_maps=UpdatedMaps},
 		  ok;
 	      ErrorEvent->
 		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
@@ -329,8 +329,8 @@ handle_call({clone_repo}, _From, State) ->
     RepoDir=State#state.repo_dir,
     RepoGit=State#state.repo_git,
     Result=try lib_deployment:clone_repo(RepoDir,RepoGit) of
-	       ok->
-		   ok;
+	        {ok,R}->
+		    {ok,R};
 	       {error,Reason}->
 		   {error,Reason}
 	   catch
@@ -338,9 +338,9 @@ handle_call({clone_repo}, _From, State) ->
 		   {Event,Reason,Stacktrace,?MODULE,?LINE}
 	   end,
     Reply=case Result of
-	      ok->
-		%  io:format("CloneResult ~p~n",[{ok,?MODULE,?LINE}]),
-		  NewState=State,
+         {ok,UpdatedMaps}->
+		  %io:format("UpdateResult ~p~n",[{UpdateResult,?MODULE,?LINE}]),
+		  NewState=State#state{spec_maps=UpdatedMaps},
 		  ok;
 	      ErrorEvent->
 		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),

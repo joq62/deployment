@@ -22,6 +22,7 @@ no_ebin_commit:
 	rm -rf erl_cra* rebar3_crashreport_GLURK;
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
+	rm -rf inventory;
 	rm -rf catalog;
 	rm -rf doc;
 	rm -rf test_ebin;
@@ -37,9 +38,6 @@ no_ebin_commit:
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
 	rm -rf *_a;
-	# copy production rebar.config from src
-	rm -f rebar.config;
-	cp src/rebar.config rebar.config;
 	#INFO: Compile application
 	mkdir ebin;		
 	rebar3 compile;	
@@ -60,6 +58,7 @@ with_ebin_commit:
 	rm -rf erl_cra* rebar3_crashreport_GLURK;
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
+	rm -rf inventory;
 	rm -rf catalog;
 	rm -rf doc;
 	rm -rf test_ebin;
@@ -75,9 +74,6 @@ with_ebin_commit:
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
 	rm -rf *_a;
-	# copy production rebar.config from src
-	rm -f rebar.config;
-	cp src/rebar.config rebar.config;
 	#INFO: Compile application
 	mkdir ebin;		
 	rebar3 compile;	
@@ -94,8 +90,9 @@ build:
 	rm -rf erl_cra* rebar3_crashreport_GLURK;
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
-	rm -rf doc;
+	rm -rf inventory;
 	rm -rf catalog;
+	rm -rf doc;
 	rm -rf test_ebin;
 	#INFO: Deleting tilde files and beams
 	rm -rf *~ */*~ */*/*~;
@@ -108,11 +105,7 @@ build:
 	rm -rf rebar.lock
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
-	rm -rf catalog;
 	rm -rf *_a;
-	# copy production rebar.config from src
-	rm -f rebar.config;
-	cp src/rebar.config rebar.config;
 	#INFO: Compile application
 	mkdir ebin;		
 	rebar3 compile;	
@@ -127,8 +120,8 @@ clean:
 	rm -rf erl_cra* rebar3_crashreport_GLURK;
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
+	rm -rf inventory;
 	rm -rf catalog;
-	rm -rf doc;
 	rm -rf test_ebin;
 	#INFO: Deleting tilde files and beams
 	rm -rf *~ */*~ */*/*~;
@@ -153,6 +146,7 @@ eunit:
 	rm -rf erl_cra* rebar3_crashreport_GLURK;
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
+	rm -rf inventory;
 	rm -rf catalog;
 	rm -rf doc;
 	rm -rf test_ebin;
@@ -167,15 +161,12 @@ eunit:
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
 	rm -rf *_a;
-	# copy local test  test_rebar.config from test
-	#rm -f rebar.config;
-	#cp src/rebar.config rebar.config;
 	#INFO: Creating eunit test code using test_ebin dir;
 	mkdir test_ebin;
 	cp test/*.app test_ebin;
 	#rm test/dependent_apps.erl;
 	#cp /home/joq62/erlang/dev_support/dependent_apps.erl test;
-	erlc -I include -I /home/joq62/erlang/include -o test_ebin test/*.erl;
+	erlc -I include -I /home/joq62/erlang/include -I /home/joq62/erlang/dev/catalog/include/catalog.hrl -o test_ebin test/*.erl;
 	#INFO: Creating Common applications needed for testing
 	#INFO: Creating log
 	#rm -rf log;
@@ -196,68 +187,14 @@ eunit:
 	mkdir ebin;		
 	rebar3 compile;	
 	cp _build/default/lib/*/ebin/* ebin;
-	rm -rf _build*;
+#	rm -rf _build*;
 	#INFO: Starts the eunit testing .................
 	erl -pa ebin -pa priv -pa test_ebin\
-	    -sname catalog_a\
-	    -run $(m) start\
-	    -setcookie a
-local_eunit: 
-	#INFO: eunit STARTED
-	#INFO: Cleaning up to prepare build STARTED	 
-	#INFO: Deleting crash reports
-	rm -rf erl_cra* rebar3_crashreport_GLURK;
-	#INFO: Deleting euinit test applications dirs
-	rm -rf log resource_discovery etcd;
-	rm -rf test_ebin;
-	#INFO: Deleting tilde files and beams
-	rm -rf src/*.beam src/*/*.beam;
-	rm -rf test/*.beam test/*/*.beam;
-	rm -rf *.beam;
-	#INFO: Deleting files and dirs created during builds
-	rm -rf _build;
-	rm -rf ebin;
-	rm -rf rebar.lock
-	#INFO: Deleting files and dirs created during execution/runtime 
-	rm -rf logs;
-	rm -rf *_a;
-	# copy production rebar.config from src
-	rm -f rebar.config;
-	cp test/test_rebar.config rebar.config;
-	#INFO: Creating eunit test code using test_ebin dir;
-	mkdir test_ebin;
-	cp test/*.app test_ebin;
-	#rm test/dependent_apps.erl;
-	#cp /home/joq62/erlang/dev_support/dependent_apps.erl test;
-	erlc -I include -I /home/joq62/erlang/include -o test_ebin test/*.erl;
-	#INFO: Creating Common applications needed for testing
-	#INFO: Creating ssh_service
-	#rm -rf log;
-	#git clone https://github.com/joq62/log.git log;
-	erlc -I ../ssh_service/include -I include -I /home/joq62/erlang/include -o test_ebin ../ssh_service/src/*.erl;
-	cp ../ssh_service/src/ssh_service.app.src test_ebin/ssh_service.app;
-	#INFO: Creating log
-	#rm -rf log;
-	#git clone https://github.com/joq62/log.git log;
-	erlc -I ../log/include -I include -I /home/joq62/erlang/include -o test_ebin ../log/src/*.erl;
-	cp ../log/src/log.app.src test_ebin/log.app;
-	#INFO: Creating resource_discovery
-	#rm -rf resource_discovery;
-	#git clone https://github.com/joq62/resource_discovery.git resource_discovery;
-	erlc -I ../resource_discovery/include -I include -I /home/joq62/erlang/include -o test_ebin ../resource_discovery/src/*.erl;
-	cp ../resource_discovery/src/rd.app.src test_ebin/rd.app;
-	#INFO: Creating etcd 
-	#rm -rf etcd;
-	#git clone https://github.com/joq62/etcd.git etcd;
-	erlc -I ../etcd/include -I include -I /home/joq62/erlang/include -o test_ebin ../etcd/src/*.erl;
-	cp ../etcd/src/etcd.app.src test_ebin/etcd.app;
-	#INFO: Compile application
-	mkdir ebin;		
-	rebar3 compile;	
-	cp _build/default/lib/*/ebin/* ebin;
-	rm -rf _build*;
-	#INFO: Starts the eunit testing .................
-	erl -pa ebin -pa priv -pa test_ebin\
-	    -sname control_a\
+	    -pa /home/joq62/erlang/dev/log/ebin\
+	    -pa /home/joq62/erlang/dev/resource_discovery/ebin\
+	    -pa /home/joq62/erlang/dev/catalog/ebin\
+	    -pa /home/joq62/erlang/dev/host/ebin\
+	    -pa /home/joq62/erlang/dev/controller/ebin\
+	    -sname deployment_a\
 	    -run $(m) start\
 	    -setcookie a
