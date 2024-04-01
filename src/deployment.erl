@@ -23,17 +23,18 @@
 %% API
 
 -export([
-	
+	 all_filenames/0,
+	 read_file/1,
+	 
 	 is_repo_updated/0,
 	 update_repo/0,
-	 clone_repo/0
+	 clone/0,
+	 delete/0
 	]).
 
 -export([
-	 get_maps/0,
-	 get_map/1,
-	 get_deployments/0,
-	 get_info/2
+	 update_repo_dir/1,
+	 update_git_path/1
 	 
 	]).
 
@@ -57,69 +58,71 @@
 -define(SERVER, ?MODULE).
 		     
 -record(state, {
-		
-		main_dir,
-	        repo_dir,
-		spec_maps,
-	        repo_git
+		repo_dir,
+		git_path
 	        
 	       }).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
-
-%%********************* Appl *****************************************
-
 %%--------------------------------------------------------------------
 %% @doc
-%% get the full path to ebin and if presence the priv dirs to application
-%% ApplId  
+%% Reads the filenames in the RepoDir   
 %% 
 %% @end
 %%--------------------------------------------------------------------
--spec get_info(Key:: atom(),DeploymentId :: string()) -> 
-	  {ok,Value:: term()} | {error, Reason :: term()}.
-get_info(Key,DeploymentId) ->
-    gen_server:call(?SERVER,{get_info,Key,DeploymentId},infinity).
+-spec all_filenames() -> 
+	  {ok,FileNames::term()} | {error,Reason :: term()}.
+
+all_filenames() ->
+    gen_server:call(?SERVER,{all_filenames},infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% get the full path to ebin and if presence the priv dirs to application
-%% ApplId  
+%% Reads the filenames in the RepoDir   
 %% 
 %% @end
 %%--------------------------------------------------------------------
--spec get_deployments() -> 
-	  {ok,DeploymentNamesList :: term()} | {error, Reason :: term()}.
-get_deployments() ->
-    gen_server:call(?SERVER,{get_deployments},infinity).
-%%--------------------------------------------------------------------
-%% @doc
-%% get the full path to ebin and if presence the priv dirs to application
-%% ApplId  
-%% 
-%% @end
-%%--------------------------------------------------------------------
--spec get_maps() -> 
-	  {ok,MapsList :: term()} | {error, Reason :: term()}.
-get_maps() ->
-    gen_server:call(?SERVER,{get_maps},infinity).
+-spec read_file(FileName ::string()) -> 
+	  {ok,Info::term()} | {error,Reason :: term()}.
+
+read_file(FileName) ->
+    gen_server:call(?SERVER,{read_file,FileName},infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% get the full path to ebin and if presence the priv dirs to application
-%% ApplId  
+%%    
 %% 
 %% @end
 %%--------------------------------------------------------------------
--spec get_map(DeploymentId :: string()) -> 
-	  {ok, Map :: map()} | {error, Reason :: term()}.
-get_map(DeploymentId) ->
-    gen_server:call(?SERVER,{get_map,DeploymentId},infinity).
+-spec update_repo() -> 
+	  ok | {error, Reason :: term()}.
+update_repo() ->
+    gen_server:call(?SERVER,{update_repo},infinity).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Reads the filenames in the RepoDir   
+%% 
+%% @end
+%%--------------------------------------------------------------------
+-spec delete() -> 
+	  ok | {error,Reason :: term()}.
 
-%%********************* Repo ************************************
+delete() ->
+    gen_server:call(?SERVER,{delete},infinity).
+
+%%--------------------------------------------------------------------
+%% @doc
+%%    
+%% 
+%% @end
+%%--------------------------------------------------------------------
+-spec clone() -> 
+	  ok | {error, Reason :: term()}.
+clone() ->
+    gen_server:call(?SERVER,{clone},infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -134,16 +137,6 @@ get_map(DeploymentId) ->
 is_repo_updated() ->
     gen_server:call(?SERVER,{is_repo_updated},infinity).
 
-%%--------------------------------------------------------------------
-%% @doc
-%% repo   
-%% 
-%% @end
-%%--------------------------------------------------------------------
--spec update_repo() -> 
-	  ok | {error, Reason :: term()}.
-update_repo() ->
-    gen_server:call(?SERVER,{update_repo},infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -151,10 +144,25 @@ update_repo() ->
 %% 
 %% @end
 %%--------------------------------------------------------------------
--spec clone_repo() -> 
-	  ok | {error, Reason :: term()}.
-clone_repo() ->
-    gen_server:call(?SERVER,{clone_repo},infinity).
+-spec update_repo_dir(RepoDir::string()) -> 
+	  true | {error,Reason :: term()}.
+
+% {error,["Inventory doesnt exists, need to clone"]} .
+update_repo_dir(RepoDir) ->
+    gen_server:call(?SERVER,{update_repo_dir,RepoDir},infinity).
+
+%%--------------------------------------------------------------------
+%% @doc
+%%    
+%% 
+%% @end
+%%--------------------------------------------------------------------
+-spec update_git_path(GitPath::string()) -> 
+	  true | {error,Reason :: term()}.
+
+% {error,["Inventory doesnt exists, need to clone"]} .
+update_git_path(GitPath) ->
+    gen_server:call(?SERVER,{update_git_path,GitPath},infinity).
 
 
 %%--------------------------------------------------------------------
@@ -213,10 +221,8 @@ init([]) ->
     
 %    ?LOG_NOTICE("Server started ",[?MODULE]),
     {ok, #state{
-	    main_dir=?MainDir,
 	    repo_dir=?RepoDir,
-	    spec_maps=[],
-	    repo_git=?RepoGit
+	    git_path=?RepoGit
 	  
 	    
 	   },0}.
@@ -238,54 +244,94 @@ init([]) ->
 	  {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
 	  {stop, Reason :: term(), NewState :: term()}.
 
-%%********************* Deployment *****************************************
-handle_call({get_maps}, _From, State) ->
-    Reply=State#state.spec_maps,
-    {reply, Reply, State};
 
-handle_call({get_deployments}, _From, State) ->
-    Reply= [maps:get(id,Map)||Map<-State#state.spec_maps],
-    {reply, Reply, State};
-
-handle_call({get_map,DeploymentId}, _From, State) ->
-    Reply=case [Map||Map<-State#state.spec_maps,
-		     DeploymentId==maps:get(id,Map)] of
-	      []->
-		  {error,["DeploymentId doesn't exists",DeploymentId]};
-	      [Map]->
-		  {ok,Map}
-	  end,
-    {reply, Reply, State};
-
-handle_call({get_info,Key,DeploymentId}, _From, State) ->
-    SpecMaps=State#state.spec_maps,
-    Result=try lib_deployment:get_info(Key,DeploymentId,SpecMaps) of
+handle_call({all_filenames}, _From, State) ->
+    RepoDir=State#state.repo_dir,
+    Result=try rd:call(git_handler,all_filenames,[RepoDir],5000) of
 	       {ok,R}->
-		   {ok,R};
-	       {error,Reason}->
-		   {error,Reason}
+		    {ok,R};
+	       Error->
+		   Error
 	   catch
 	       Event:Reason:Stacktrace ->
 		   {Event,Reason,Stacktrace,?MODULE,?LINE}
 	   end,
     Reply=case Result of
-	      {ok,Value}->
-		  {ok,Value};
+	      {ok,AllFileNames}->
+		  {ok,AllFileNames};
+	      ErrorEvent->
+		% io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
+		  ErrorEvent
+	  end,
+    {reply, Reply,State};
+
+handle_call({read_file,FileName}, _From, State) ->
+    RepoDir=State#state.repo_dir,
+    Result=try rd:call(git_handler,read_file,[RepoDir,FileName],5000) of
+	       {ok,R}->
+		    {ok,R};
+	       Error->
+		   Error
+	   catch
+	       Event:Reason:Stacktrace ->
+		   {Event,Reason,Stacktrace,?MODULE,?LINE}
+	   end,
+    Reply=case Result of
+	      {ok,Info}->
+		  {ok,Info};
+	      ErrorEvent->
+		 ErrorEvent
+	  end,
+    {reply, Reply,State};
+
+handle_call({update_repo}, _From, State) ->
+    RepoDir=State#state.repo_dir,
+    Result=try rd:call(git_handler,update_repo,[RepoDir],5000) of 
+	       {ok,R}->
+		   {ok,R};
+	       Error->
+		   Error
+	   catch
+	       Event:Reason:Stacktrace ->
+		   {Event,Reason,Stacktrace,?MODULE,?LINE}
+	   end,
+    Reply=case Result of
+	      {ok,Info}->
+		  {ok,Info};
 	      ErrorEvent->
 		  ErrorEvent
 	  end,
-    {reply, Reply, State};
+    {reply, Reply,State};
+
+handle_call({clone}, _From, State) ->
+    RepoDir=State#state.repo_dir,
+    GitPath=State#state.git_path,
+    Result=try rd:call(git_handler,clone,[RepoDir,GitPath],5000) of 
+	       ok->
+		   ok;
+	       Error->
+		   Error
+	   catch
+	       Event:Reason:Stacktrace ->
+		   {Event,Reason,Stacktrace,?MODULE,?LINE}
+	   end,
+    Reply=case Result of
+	      ok->
+		  ok;
+	      ErrorEvent->
+		  ErrorEvent
+	  end,
+    {reply, Reply,State};
 
 
-%%********************* Repo ************************************
     
 handle_call({is_repo_updated}, _From, State) ->
     RepoDir=State#state.repo_dir,
-    Result=try lib_deployment:is_repo_updated(RepoDir) of
+    Result=try rd:call(git_handler,is_repo_updated,[RepoDir],5000) of 
 	       {ok,R}->
 		   {ok,R};
-	       {error,Reason}->
-		   {error,Reason}
+	       Error->
+		   Error
 	   catch
 	       Event:Reason:Stacktrace ->
 		   {Event,Reason,Stacktrace,?MODULE,?LINE}
@@ -293,62 +339,21 @@ handle_call({is_repo_updated}, _From, State) ->
     Reply=case Result of
 	      {ok,IsUpdated}->
 		  %io:format("IsUpdated ~p~n",[{IsUpdated,?MODULE,?LINE}]),
-		  NewState=State,
-		  IsUpdated;
+		   IsUpdated;
 	      ErrorEvent->
-		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
-		  NewState=State,
-		  {error,ErrorEvent}
+		  ErrorEvent
 	  end,
+    {reply, Reply, State};
+
+handle_call({update_repo_dir,RepoDir}, _From, State) ->
+    NewState=State#state{repo_dir=RepoDir},
+    Reply=ok,
     {reply, Reply, NewState};
 
-handle_call({update_repo}, _From, State) ->
-    RepoDir=State#state.repo_dir,
-    Result=try lib_deployment:update_repo(RepoDir) of
-	       {ok,R}->
-		    {ok,R};
-	       {error,Reason}->
-		   {error,Reason}
-	   catch
-	       Event:Reason:Stacktrace ->
-		   {Event,Reason,Stacktrace,?MODULE,?LINE}
-	   end,
-    Reply=case Result of
-	      {ok,UpdatedMaps}->
-		  %io:format("UpdateResult ~p~n",[{UpdateResult,?MODULE,?LINE}]),
-		  NewState=State#state{spec_maps=UpdatedMaps},
-		  ok;
-	      ErrorEvent->
-		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
-		  NewState=State,
-		  {error,ErrorEvent}
-	  end,
+handle_call({update_git_path,GitPath}, _From, State) ->
+    NewState=State#state{git_path=GitPath},
+    Reply=ok,
     {reply, Reply, NewState};
-
-handle_call({clone_repo}, _From, State) ->
-    RepoDir=State#state.repo_dir,
-    RepoGit=State#state.repo_git,
-    Result=try lib_deployment:clone_repo(RepoDir,RepoGit) of
-	        {ok,R}->
-		    {ok,R};
-	       {error,Reason}->
-		   {error,Reason}
-	   catch
-	       Event:Reason:Stacktrace ->
-		   {Event,Reason,Stacktrace,?MODULE,?LINE}
-	   end,
-    Reply=case Result of
-         {ok,UpdatedMaps}->
-		  %io:format("UpdateResult ~p~n",[{UpdateResult,?MODULE,?LINE}]),
-		  NewState=State#state{spec_maps=UpdatedMaps},
-		  ok;
-	      ErrorEvent->
-		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
-		  NewState=State,
-		  {error,ErrorEvent}
-	  end,
-    {reply, Reply, NewState};
- 
 
 %%--------------------------------------------------------------------
 
@@ -391,28 +396,21 @@ handle_cast(UnMatchedSignal, State) ->
 
 handle_info(timeout, State) ->
  %   io:format("timeout ~p~n",[{?MODULE,?LINE}]),
+  
+      ok=initial_trade_resources(),
     RepoDir=State#state.repo_dir,
-    RepoGit=State#state.repo_git,
-    Result=try lib_deployment:check_update_repo_return_maps(RepoDir,RepoGit) of
-	       {ok,R}->
-		   {ok,R};
-	       {error,Reason}->
-		   {error,Reason}
-	   catch
-	       Event:Reason:Stacktrace ->
-		   {Event,Reason,Stacktrace,?MODULE,?LINE}
-	   end,
-    NewState=case Result of
-		 {ok,Maps}->
-	%	     io:format("Maps ~p~n",[{Maps,?MODULE,?LINE}]),
-		     State#state{spec_maps=Maps};
-		 ErrorEvent->
-		     io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
-		     State
-	     end,
-    ok=initial_trade_resources(),
-    
-    {noreply, NewState};
+    GitPath=State#state.git_path,
+    try lib_deployment:init(RepoDir,GitPath) of
+	ok->
+	    ok;
+	{error,Reason}->
+	    {error,Reason}
+    catch
+	Event:Reason:Stacktrace ->
+	    {Event,Reason,Stacktrace,?MODULE,?LINE}
+    end,
+  
+    {noreply, State};
 
 
 handle_info(Info, State) ->

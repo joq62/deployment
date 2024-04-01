@@ -16,7 +16,9 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include("deployment.hrl").
+
+-define(DeploymentRepoDir,"deployment_specs_test").
+-define(DeploymentGit,"https://github.com/joq62/deployment_specs_test.git").
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -27,10 +29,8 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     
     ok=setup(),
-    ok=loop(false),
-  %  ok=git_test:start(),
-   % ok=git_fetch_test:start(),
-
+    ok=git_test:start(),
+ 
     io:format("Test OK !!! ~p~n",[?MODULE]),
 %    timer:sleep(1000),
 %    init:stop(),
@@ -43,37 +43,6 @@ start()->
 %% @end
 %%--------------------------------------------------------------------
 
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-loop(RepoState)->
-    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
-     io:format("get_deployments ~p~n",[{deployment:get_deployments(),?MODULE,?LINE}]),
-   
-    NewState=case deployment:is_repo_updated() of
-		 true->
-		     case RepoState of
-			 false->
-			     io:format("RepoState false-> true ~p~n",[{deployment:is_repo_updated(),?MODULE,?LINE}]),
-			     true;
-			 true->
-			     RepoState
-		     end;
-		 false->
-		     case RepoState of
-			 true->
-			     io:format("RepoState true->false ~p~n",[{deployment:is_repo_updated(),?MODULE,?LINE}]),
-			     deployment:update_repo(), 
-			     false;
-			 false->
-			     RepoState
-		     end
-	     end,
-		    
-    timer:sleep(10000),
-    loop(NewState).
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -87,30 +56,9 @@ setup()->
     pong=log:ping(),
     ok=application:start(rd),
     pong=rd:ping(),
-
-    file:del_dir_r(?MainDir),
-    file:make_dir(?MainDir),
-
-    ok=application:start(catalog),
-    pong=catalog:ping(),
-    CatalogResult=[catalog:clone_application_repo(ApplicationId)||ApplicationId<-lists:sort(catalog:get_all_ids())],
-    []=[R||R<-CatalogResult,
-	   ok=/=R],
-    
-
-    ok=application:start(host),
-    pong=host:ping(),
+    ok=application:start(git_handler),
+    pong=git_handler:ping(),
     ok=application:start(deployment),
     pong=deployment:ping(),
     
-
-    ok=application:start(controller),
-    pong=controller:ping(),
- 
-
-    [rd:add_local_resource(ResourceType,Resource)||{ResourceType,Resource}<-[]],
-    [rd:add_target_resource_type(TargetType)||TargetType<-[log,rd,catalog,adder,divi]],
-    rd:trade_resources(),
-    timer:sleep(3000),
-   
     ok.

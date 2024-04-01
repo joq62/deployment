@@ -23,7 +23,7 @@ no_ebin_commit:
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
 	rm -rf inventory;
-	rm -rf catalog;
+	rm -rf catalog deployment_specs deployment_specs_test;
 	rm -rf doc;
 	rm -rf test_ebin;
 	#INFO: Deleting tilde files and beams
@@ -59,7 +59,7 @@ with_ebin_commit:
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
 	rm -rf inventory;
-	rm -rf catalog;
+	rm -rf catalog deployment_specs deployment_specs_test;
 	rm -rf doc;
 	rm -rf test_ebin;
 	#INFO: Deleting tilde files and beams
@@ -91,7 +91,7 @@ build:
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
 	rm -rf inventory;
-	rm -rf catalog;
+	rm -rf catalog deployment_specs deployment_specs_test;
 	rm -rf doc;
 	rm -rf test_ebin;
 	#INFO: Deleting tilde files and beams
@@ -121,7 +121,7 @@ clean:
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
 	rm -rf inventory;
-	rm -rf catalog;
+	rm -rf catalog deployment_specs deployment_specs_test;
 	rm -rf test_ebin;
 	#INFO: Deleting tilde files and beams
 	rm -rf *~ */*~ */*/*~;
@@ -135,9 +135,6 @@ clean:
 	#INFO: Deleting files and dirs created during execution/runtime 
 	rm -rf logs;
 	rm -rf *_a;
-	# copy production rebar.config from src
-	rm -f rebar.config;
-	cp src/rebar.config rebar.config;
 	#INFO: clean ENDED SUCCESSFUL
 eunit: 
 	#INFO: eunit STARTED
@@ -147,7 +144,7 @@ eunit:
 	#INFO: Deleting euinit test applications dirs
 	rm -rf log resource_discovery etcd;
 	rm -rf inventory;
-	rm -rf catalog;
+	rm -rf catalog deployment_specs deployment_specs_test;
 	rm -rf doc;
 	rm -rf test_ebin;
 	#INFO: Deleting tilde files and beams
@@ -166,23 +163,8 @@ eunit:
 	cp test/*.app test_ebin;
 	#rm test/dependent_apps.erl;
 	#cp /home/joq62/erlang/dev_support/dependent_apps.erl test;
-	erlc -I include -I /home/joq62/erlang/include -I /home/joq62/erlang/dev/catalog/include/catalog.hrl -o test_ebin test/*.erl;
+	erlc -I include -I /home/joq62/erlang/include -o test_ebin test/*.erl;
 	#INFO: Creating Common applications needed for testing
-	#INFO: Creating log
-	#rm -rf log;
-	#git clone https://github.com/joq62/log.git log;
-	#erlc -I log/include -I include -I /home/joq62/erlang/include -o test_ebin log/src/*.erl;
-	#cp log/src/log.app.src test_ebin/log.app;
-	#INFO: Creating resource_discovery
-	#rm -rf resource_discovery;
-	#git clone https://github.com/joq62/resource_discovery.git resource_discovery;
-	#erlc -I resource_discovery/include -I include -I /home/joq62/erlang/include -o test_ebin resource_discovery/src/*.erl;
-	#cp resource_discovery/src/rd.app.src test_ebin/rd.app;
-	#INFO: Creating etcd 
-	#rm -rf etcd;
-	#git clone https://github.com/joq62/etcd.git etcd;
-	#erlc -I etcd/include -I include -I /home/joq62/erlang/include -o test_ebin etcd/src/*.erl;
-	#cp etcd/src/etcd.app.src test_ebin/etcd.app;
 	#INFO: Compile application
 	mkdir ebin;		
 	rebar3 compile;	
@@ -192,9 +174,7 @@ eunit:
 	erl -pa ebin -pa priv -pa test_ebin\
 	    -pa /home/joq62/erlang/dev/log/ebin\
 	    -pa /home/joq62/erlang/dev/resource_discovery/ebin\
-	    -pa /home/joq62/erlang/dev/catalog/ebin\
-	    -pa /home/joq62/erlang/dev/host/ebin\
-	    -pa /home/joq62/erlang/dev/controller/ebin\
+	    -pa /home/joq62/erlang/dev/git_handler/ebin\
 	    -sname deployment_a\
 	    -run $(m) start\
 	    -setcookie a
