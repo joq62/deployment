@@ -358,7 +358,7 @@ handle_call({is_repo_updated}, _From, State) ->
     {reply, Reply, State};
 
 handle_call({update}, _From, State) ->
-    io:format(" ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+%    io:format(" ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     RepoDir=State#state.repo_dir,
     GitPath=State#state.git_path,
     Reply=try lib_deployment:init(RepoDir,GitPath) of
@@ -370,8 +370,6 @@ handle_call({update}, _From, State) ->
 	      Event:Reason:Stacktrace ->
 		  {Event,Reason,Stacktrace,?MODULE,?LINE}
 	  end,
-
-    io:format("get all filenames ~p~n",[{rd:call(git_handler,all_filenames,[RepoDir],5000),?MODULE,?LINE}]),
     spawn(fun()->lib_deployment:timer_to_call_update(?Interval) end),
     {reply, Reply, State};
 
