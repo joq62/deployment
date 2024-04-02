@@ -29,7 +29,8 @@
 	 is_repo_updated/0,
 	 update_repo/0,
 	 clone/0,
-	 delete/0
+	 delete/0,
+	 update/0
 	]).
 
 -export([
@@ -163,6 +164,17 @@ update_repo_dir(RepoDir) ->
 % {error,["Inventory doesnt exists, need to clone"]} .
 update_git_path(GitPath) ->
     gen_server:call(?SERVER,{update_git_path,GitPath},infinity).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
+-spec update() -> ok | Error::term().
+update()-> 
+    gen_server:call(?SERVER, {update},infinity).
+
+
 
 
 %%--------------------------------------------------------------------
@@ -345,6 +357,24 @@ handle_call({is_repo_updated}, _From, State) ->
 	  end,
     {reply, Reply, State};
 
+handle_call({update}, _From, State) ->
+    io:format(" ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    RepoDir=State#state.repo_dir,
+    GitPath=State#state.git_path,
+    Reply=try lib_deployment:init(RepoDir,GitPath) of
+	      ok->
+		  ok;
+	      {error,Reason}->
+		  {error,Reason}
+	  catch
+	      Event:Reason:Stacktrace ->
+		  {Event,Reason,Stacktrace,?MODULE,?LINE}
+	  end,
+
+    io:format("get all filenames ~p~n",[{rd:call(git_handler,all_filenames,[RepoDir],5000),?MODULE,?LINE}]),
+    spawn(fun()->lib_deployment:timer_to_call_update(?Interval) end),
+    {reply, Reply, State};
+
 handle_call({update_repo_dir,RepoDir}, _From, State) ->
     NewState=State#state{repo_dir=RepoDir},
     Reply=ok,
@@ -409,7 +439,7 @@ handle_info(timeout, State) ->
 	Event:Reason:Stacktrace ->
 	    {Event,Reason,Stacktrace,?MODULE,?LINE}
     end,
-  
+    spawn(fun()->lib_deployment:timer_to_call_update(?Interval) end),
     {noreply, State};
 
 
