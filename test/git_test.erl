@@ -68,7 +68,17 @@ test1()->
     true=filelib:is_dir(?DeploymentRepoDir),
     {ok,["first.deployment"]}=deployment:all_filenames(),
     {ok,[Map]}=deployment:read_file("first.deployment"),
-    [{"adder","c200"},{"adder","c202"},{"divi","c200"},{"divi","c202"}]=lists:sort(maps:get(deployments,Map)),
+  [
+   {"adder.application","c200"},
+   {"adder.application","c202"},
+   {"adder.application","c50"},
+   {"adder.application","c50"},
+   {"adder.application","c50"},
+   {"divi.application","c200"},
+   {"divi.application","c202"},
+   {"divi.application","c50"},
+   {"divi.application","c50"}
+  ]=lists:sort(maps:get(deployments,Map)),
     {error,_,_,_,_}=deployment:read_file("glurk.deployment"),
     {error,["Already updated ",?DeploymentRepoDir]}=deployment:update_repo(),
     
